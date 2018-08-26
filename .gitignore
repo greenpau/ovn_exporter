@@ -1,0 +1,6 @@
+/.build
+/.release
+/.tarballs
+/ovn-exporter
+*.tar.gz
+bin/
