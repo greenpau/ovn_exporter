@@ -4,3 +4,4 @@
 /ovn-exporter
 *.tar.gz
 bin/
+dist/
