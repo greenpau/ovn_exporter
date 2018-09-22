@@ -190,7 +190,7 @@ var (
 	clusterRole = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "cluster_role"),
 		"The role of this server in the cluster. The values are: 3 - leader, 2 - candidate, 1 - follower, 0 - other.",
-		[]string{"system_id", "component", "server_id", "cluster_id"}, nil,
+		[]string{"system_id", "component", "server_id", "server_uuid", "cluster_id", "cluster_uuid"}, nil,
 	)
 	clusterStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "cluster_status"),
@@ -677,7 +677,9 @@ func (e *Exporter) GatherMetrics() {
 						e.client.System.ID,
 						component,
 						cluster.ID,
+						cluster.UUID,
 						cluster.ClusterID,
+						cluster.ClusterUUID,
 					))
 					e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 						clusterStatus,

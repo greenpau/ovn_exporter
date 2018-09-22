@@ -13,7 +13,20 @@ This exporter exports metrics from the following OVN components:
 
 ## Getting Started
 
-To run it:
+Run the following commands to install it:
+
+```bash
+wget https://github.com/greenpau/ovn_exporter/releases/download/v1.0.0/ovn-exporter-1.0.0.linux-amd64.tar.gz
+tar xvzf ovn-exporter-1.0.0.linux-amd64.tar.gz
+cd ovn-exporter*
+./install.sh
+cd ..
+rm -rf ovn-exporter-1.0.0.linux-amd64*
+systemctl status ovn-exporter -l
+curl -s localhost:9476/metrics | grep server_id
+```
+
+Run the following commands to build and test it:
 
 ```bash
 cd $GOPATH/src
