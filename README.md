@@ -74,6 +74,7 @@ make qtest
 | `ovn_network_port` |  The TCP port used for database connection. If the value is 0, then the port is not in use. | `system_id` |
 | `ovn_next_poll` |  The timestamp of the next potential poll of OVN stack. | `system_id` |
 | `ovn_pid` |  The process ID of a running OVN component. If the component is not running, then the ID is 0. | `system_id` |
+| `ovn_cluster_group` | The cluster group in which this server participates. It is a combination of SB and NB cluster IDs. This metric is always up (1). | `system_id`, `cluster_group` |
 | `ovn_up` |  Is OVN stack up (1) or is it down (0). | `system_id` |
 
 For example:

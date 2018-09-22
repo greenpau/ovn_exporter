@@ -252,6 +252,11 @@ var (
 		"The raft's low number associated with this server.",
 		[]string{"system_id", "component", "server_id", "cluster_id"}, nil,
 	)
+	clusterGroup = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "cluster_group"),
+		"The cluster group in which this server participates. It is a combination of SB and NB cluster IDs. This metric is always up (1).",
+		[]string{"system_id", "cluster_group"}, nil,
+	)
 )
 
 // Exporter collects OVN data from the given server and exports them using
@@ -333,6 +338,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- clusterPeerMatchIndex
 	ch <- clusterPeerInConnInfo
 	ch <- clusterPeerOutConnInfo
+	ch <- clusterGroup
 }
 
 // IncrementErrorCounter increases the counter of failed queries
@@ -601,6 +607,9 @@ func (e *Exporter) GatherMetrics() {
 	}
 	log.Debugf("%s: GatherMetrics() completed GetLogicalSwitchPorts()", e.client.System.ID)
 
+	northClusterID := ""
+	southClusterID := ""
+
 	components = []string{
 		"ovsdb-server-southbound",
 		"ovsdb-server-northbound",
@@ -663,6 +672,12 @@ func (e *Exporter) GatherMetrics() {
 					))
 				} else {
 					isClusterEnabled = true
+					switch component {
+					case "ovsdb-server-southbound":
+						southClusterID = cluster.ClusterID
+					case "ovsdb-server-northbound":
+						northClusterID = cluster.ClusterID
+					}
 					e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 						clusterEnabled,
 						prometheus.GaugeValue,
@@ -847,6 +862,16 @@ func (e *Exporter) GatherMetrics() {
 				log.Debugf("%s: GatherMetrics() completed GetAppClusteringInfo(%s)", e.client.System.ID, component)
 			}
 		}
+	}
+
+	if northClusterID != "" && southClusterID != "" {
+		e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
+			clusterGroup,
+			prometheus.GaugeValue,
+			1,
+			e.client.System.ID,
+			northClusterID+southClusterID,
+		))
 	}
 
 	components = []string{
