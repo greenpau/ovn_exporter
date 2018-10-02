@@ -509,7 +509,7 @@ func (e *Exporter) GatherMetrics() {
 				e.client.System.ID,
 				vtep.UUID,
 				vtep.Name,
-				vtep.IPAddress,
+				vtep.IPAddress.String(),
 			))
 		}
 	}
