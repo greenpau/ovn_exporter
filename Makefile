@@ -6,6 +6,8 @@ BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BINARY:=ovn-exporter
 VERBOSE:=-v
+PROJECT=github.com/greenpau/ovn_exporter
+PKG_DIR=pkg/ovn_exporter
 
 all:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
@@ -19,14 +21,15 @@ all:
 		-X github.com/prometheus/common/version.Branch=$(GIT_BRANCH) \
 		-X github.com/prometheus/common/version.BuildUser=$(BUILD_USER) \
 		-X github.com/prometheus/common/version.BuildDate=$(BUILD_DATE) \
-		-X main.appName=$(BINARY) \
-		-X main.appVersion=$(APP_VERSION) \
-		-X main.gitBranch=$(GIT_BRANCH) \
-		-X main.gitCommit=$(GIT_COMMIT) \
-		-X main.buildUser=$(BUILD_USER) \
-		-X main.buildDate=$(BUILD_DATE)" \
+		-X $(PROJECT)/$(PKG_DIR).appName=$(BINARY) \
+		-X $(PROJECT)/$(PKG_DIR).appVersion=$(APP_VERSION) \
+		-X $(PROJECT)/$(PKG_DIR).gitBranch=$(GIT_BRANCH) \
+		-X $(PROJECT)/$(PKG_DIR).gitCommit=$(GIT_COMMIT) \
+		-X $(PROJECT)/$(PKG_DIR).buildUser=$(BUILD_USER) \
+		-X $(PROJECT)/$(PKG_DIR).buildDate=$(BUILD_DATE)" \
 		-gcflags="all=-trimpath=$(GOPATH)/src" \
-		-asmflags="all=-trimpath $(GOPATH)/src"
+		-asmflags="all=-trimpath $(GOPATH)/src" \
+		./cmd/ovn_exporter/*.go
 	@echo "Done!"
 
 test: all

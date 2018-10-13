@@ -12,19 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package ovn_exporter
 
 import (
-	"flag"
-	"fmt"
 	//"github.com/davecgh/go-spew/spew"
 	"github.com/greenpau/ovsdb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -263,7 +259,7 @@ var (
 // the prometheus metrics package.
 type Exporter struct {
 	sync.RWMutex
-	client               *ovsdb.OvnClient
+	Client               *ovsdb.OvnClient
 	timeout              int
 	pollInterval         int64
 	errors               int64
@@ -272,28 +268,33 @@ type Exporter struct {
 	metrics              []prometheus.Metric
 }
 
-type exporterOpts struct {
-	timeout int
+type Options struct {
+	Timeout int
 }
 
 // NewExporter returns an initialized Exporter.
-func NewExporter(opts exporterOpts) (*Exporter, error) {
+func NewExporter(opts Options) (*Exporter, error) {
+	version.Version = appVersion
+	version.Revision = gitCommit
+	version.Branch = gitBranch
+	version.BuildUser = buildUser
+	version.BuildDate = buildDate
 	e := Exporter{
-		timeout: opts.timeout,
+		timeout: opts.Timeout,
 	}
 	client := ovsdb.NewOvnClient()
-	client.Timeout = opts.timeout
-	e.client = client
-	e.client.GetSystemID()
-	log.Debugf("%s: NewExporter() calls Connect()", e.client.System.ID)
+	client.Timeout = opts.Timeout
+	e.Client = client
+	e.Client.GetSystemID()
+	log.Debugf("%s: NewExporter() calls Connect()", e.Client.System.ID)
 	if err := client.Connect(); err != nil {
 		return &e, err
 	}
-	log.Debugf("%s: NewExporter() calls GetSystemInfo()", e.client.System.ID)
-	if err := e.client.GetSystemInfo(); err != nil {
+	log.Debugf("%s: NewExporter() calls GetSystemInfo()", e.Client.System.ID)
+	if err := e.Client.GetSystemInfo(); err != nil {
 		return &e, err
 	}
-	log.Debugf("%s: NewExporter() initialized successfully", e.client.System.ID)
+	log.Debugf("%s: NewExporter() initialized successfully", e.Client.System.ID)
 	return &e, nil
 }
 
@@ -352,11 +353,11 @@ func (e *Exporter) IncrementErrorCounter() {
 // Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.GatherMetrics()
-	log.Debugf("%s: Collect() calls RLock()", e.client.System.ID)
+	log.Debugf("%s: Collect() calls RLock()", e.Client.System.ID)
 	e.RLock()
 	defer e.RUnlock()
 	if len(e.metrics) == 0 {
-		log.Debugf("%s: Collect() no metrics found", e.client.System.ID)
+		log.Debugf("%s: Collect() no metrics found", e.Client.System.ID)
 		ch <- prometheus.MustNewConstMetric(
 			up,
 			prometheus.GaugeValue,
@@ -366,25 +367,25 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			info,
 			prometheus.GaugeValue,
 			1,
-			e.client.System.ID, e.client.System.RunDir, e.client.System.Hostname,
-			e.client.System.Type, e.client.System.Version,
-			e.client.Database.Vswitch.Version, e.client.Database.Vswitch.Schema.Version,
+			e.Client.System.ID, e.Client.System.RunDir, e.Client.System.Hostname,
+			e.Client.System.Type, e.Client.System.Version,
+			e.Client.Database.Vswitch.Version, e.Client.Database.Vswitch.Schema.Version,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			requestErrors,
 			prometheus.CounterValue,
 			float64(e.errors),
-			e.client.System.ID,
+			e.Client.System.ID,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			nextPoll,
 			prometheus.CounterValue,
 			float64(e.nextCollectionTicker),
-			e.client.System.ID,
+			e.Client.System.ID,
 		)
 		return
 	}
-	log.Debugf("%s: Collect() sends %d metrics to a shared channel", e.client.System.ID, len(e.metrics))
+	log.Debugf("%s: Collect() sends %d metrics to a shared channel", e.Client.System.ID, len(e.metrics))
 	for _, m := range e.metrics {
 		ch <- m
 	}
@@ -393,29 +394,29 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 // GatherMetrics collect data from OVN server and stores them
 // as Prometheus metrics.
 func (e *Exporter) GatherMetrics() {
-	log.Debugf("%s: GatherMetrics() called", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() called", e.Client.System.ID)
 	if time.Now().Unix() < e.nextCollectionTicker {
 		return
 	}
 	e.Lock()
-	log.Debugf("%s: GatherMetrics() locked", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() locked", e.Client.System.ID)
 	defer e.Unlock()
 	if len(e.metrics) > 0 {
 		e.metrics = e.metrics[:0]
-		log.Debugf("%s: GatherMetrics() cleared metrics", e.client.System.ID)
+		log.Debugf("%s: GatherMetrics() cleared metrics", e.Client.System.ID)
 	}
 	upValue := 1
 	isClusterEnabled := false
 
 	var err error
 
-	err = e.client.GetSystemInfo()
+	err = e.Client.GetSystemInfo()
 	if err != nil {
-		log.Errorf("%s: %v", e.client.Database.Vswitch.Name, err)
+		log.Errorf("%s: %v", e.Client.Database.Vswitch.Name, err)
 		e.IncrementErrorCounter()
 		upValue = 0
 	} else {
-		log.Debugf("%s: system-id: %s", e.client.Database.Vswitch.Name, e.client.System.ID)
+		log.Debugf("%s: system-id: %s", e.Client.Database.Vswitch.Name, e.Client.System.ID)
 	}
 
 	components := []string{
@@ -429,8 +430,8 @@ func (e *Exporter) GatherMetrics() {
 		"ovs-vswitchd",
 	}
 	for _, component := range components {
-		p, err := e.client.GetProcessInfo(component)
-		log.Debugf("%s: GatherMetrics() calls GetProcessInfo(%s)", e.client.System.ID, component)
+		p, err := e.Client.GetProcessInfo(component)
+		log.Debugf("%s: GatherMetrics() calls GetProcessInfo(%s)", e.Client.System.ID, component)
 		if err != nil {
 			log.Errorf("%s: pid-%v", component, err)
 			e.IncrementErrorCounter()
@@ -440,12 +441,12 @@ func (e *Exporter) GatherMetrics() {
 			pid,
 			prometheus.GaugeValue,
 			float64(p.ID),
-			e.client.System.ID,
+			e.Client.System.ID,
 			component,
 			p.User,
 			p.Group,
 		))
-		log.Debugf("%s: GatherMetrics() completed GetProcessInfo(%s)", e.client.System.ID, component)
+		log.Debugf("%s: GatherMetrics() completed GetProcessInfo(%s)", e.Client.System.ID, component)
 	}
 
 	components = []string{
@@ -456,37 +457,37 @@ func (e *Exporter) GatherMetrics() {
 		"ovs-vswitchd",
 	}
 	for _, component := range components {
-		log.Debugf("%s: GatherMetrics() calls GetLogFileInfo(%s)", e.client.System.ID, component)
-		file, err := e.client.GetLogFileInfo(component)
+		log.Debugf("%s: GatherMetrics() calls GetLogFileInfo(%s)", e.Client.System.ID, component)
+		file, err := e.Client.GetLogFileInfo(component)
 		if err != nil {
 			log.Errorf("%s: log-file-%v", component, err)
 			e.IncrementErrorCounter()
 			continue
 		}
-		log.Debugf("%s: GatherMetrics() completed GetLogFileInfo(%s)", e.client.System.ID, component)
+		log.Debugf("%s: GatherMetrics() completed GetLogFileInfo(%s)", e.Client.System.ID, component)
 		e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 			logFileSize,
 			prometheus.GaugeValue,
 			float64(file.Info.Size()),
-			e.client.System.ID,
+			e.Client.System.ID,
 			file.Component,
 			file.Path,
 		))
-		log.Debugf("%s: GatherMetrics() calls GetLogFileEventStats(%s)", e.client.System.ID, component)
-		eventStats, err := e.client.GetLogFileEventStats(component)
+		log.Debugf("%s: GatherMetrics() calls GetLogFileEventStats(%s)", e.Client.System.ID, component)
+		eventStats, err := e.Client.GetLogFileEventStats(component)
 		if err != nil {
 			log.Errorf("%s: log-event-stat: %v", component, err)
 			e.IncrementErrorCounter()
 			continue
 		}
-		log.Debugf("%s: GatherMetrics() completed GetLogFileEventStats(%s)", e.client.System.ID, component)
+		log.Debugf("%s: GatherMetrics() completed GetLogFileEventStats(%s)", e.Client.System.ID, component)
 		for sev, sources := range eventStats {
 			for source, count := range sources {
 				e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 					logEventStat,
 					prometheus.GaugeValue,
 					float64(count),
-					e.client.System.ID,
+					e.Client.System.ID,
 					component,
 					sev,
 					source,
@@ -495,9 +496,9 @@ func (e *Exporter) GatherMetrics() {
 		}
 	}
 
-	log.Debugf("%s: GatherMetrics() calls GetChassis()", e.client.System.ID)
-	if vteps, err := e.client.GetChassis(); err != nil {
-		log.Errorf("%s: %v", e.client.Database.Southbound.Name, err)
+	log.Debugf("%s: GatherMetrics() calls GetChassis()", e.Client.System.ID)
+	if vteps, err := e.Client.GetChassis(); err != nil {
+		log.Errorf("%s: %v", e.Client.Database.Southbound.Name, err)
 		e.IncrementErrorCounter()
 		upValue = 0
 	} else {
@@ -506,19 +507,19 @@ func (e *Exporter) GatherMetrics() {
 				chassisInfo,
 				prometheus.GaugeValue,
 				float64(vtep.Up),
-				e.client.System.ID,
+				e.Client.System.ID,
 				vtep.UUID,
 				vtep.Name,
 				vtep.IPAddress.String(),
 			))
 		}
 	}
-	log.Debugf("%s: GatherMetrics() completed GetChassis()", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() completed GetChassis()", e.Client.System.ID)
 
-	log.Debugf("%s: GatherMetrics() calls GetLogicalSwitches()", e.client.System.ID)
-	lsws, err := e.client.GetLogicalSwitches()
+	log.Debugf("%s: GatherMetrics() calls GetLogicalSwitches()", e.Client.System.ID)
+	lsws, err := e.Client.GetLogicalSwitches()
 	if err != nil {
-		log.Errorf("%s: %v", e.client.Database.Southbound.Name, err)
+		log.Errorf("%s: %v", e.Client.Database.Southbound.Name, err)
 		e.IncrementErrorCounter()
 		upValue = 0
 	} else {
@@ -527,7 +528,7 @@ func (e *Exporter) GatherMetrics() {
 				logicalSwitchInfo,
 				prometheus.GaugeValue,
 				1,
-				e.client.System.ID,
+				e.Client.System.ID,
 				lsw.UUID,
 				lsw.Name,
 			))
@@ -535,7 +536,7 @@ func (e *Exporter) GatherMetrics() {
 				logicalSwitchPorts,
 				prometheus.GaugeValue,
 				float64(len(lsw.Ports)),
-				e.client.System.ID,
+				e.Client.System.ID,
 				lsw.UUID,
 			))
 			if len(lsw.Ports) > 0 {
@@ -544,7 +545,7 @@ func (e *Exporter) GatherMetrics() {
 						logicalSwitchPortBinding,
 						prometheus.GaugeValue,
 						1,
-						e.client.System.ID,
+						e.Client.System.ID,
 						lsw.UUID,
 						p,
 					))
@@ -556,7 +557,7 @@ func (e *Exporter) GatherMetrics() {
 						logicalSwitchExternalIDs,
 						prometheus.GaugeValue,
 						1,
-						e.client.System.ID,
+						e.Client.System.ID,
 						lsw.UUID,
 						k,
 						v,
@@ -567,17 +568,17 @@ func (e *Exporter) GatherMetrics() {
 				logicalSwitchTunnelKey,
 				prometheus.GaugeValue,
 				float64(lsw.TunnelKey),
-				e.client.System.ID,
+				e.Client.System.ID,
 				lsw.UUID,
 			))
 		}
 	}
-	log.Debugf("%s: GatherMetrics() completed GetLogicalSwitches()", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() completed GetLogicalSwitches()", e.Client.System.ID)
 
-	log.Debugf("%s: GatherMetrics() calls GetLogicalSwitchPorts()", e.client.System.ID)
-	lswps, err := e.client.GetLogicalSwitchPorts()
+	log.Debugf("%s: GatherMetrics() calls GetLogicalSwitchPorts()", e.Client.System.ID)
+	lswps, err := e.Client.GetLogicalSwitchPorts()
 	if err != nil {
-		log.Errorf("%s: %v", e.client.Database.Southbound.Name, err)
+		log.Errorf("%s: %v", e.Client.Database.Southbound.Name, err)
 		e.IncrementErrorCounter()
 		upValue = 0
 	} else {
@@ -586,7 +587,7 @@ func (e *Exporter) GatherMetrics() {
 				logicalSwitchPortInfo,
 				prometheus.GaugeValue,
 				float64(1),
-				e.client.System.ID,
+				e.Client.System.ID,
 				port.UUID,
 				port.Name,
 				port.ChassisUUID,
@@ -600,12 +601,12 @@ func (e *Exporter) GatherMetrics() {
 				logicalSwitchPortTunnelKey,
 				prometheus.GaugeValue,
 				float64(port.TunnelKey),
-				e.client.System.ID,
+				e.Client.System.ID,
 				port.UUID,
 			))
 		}
 	}
-	log.Debugf("%s: GatherMetrics() completed GetLogicalSwitchPorts()", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() completed GetLogicalSwitchPorts()", e.Client.System.ID)
 
 	northClusterID := ""
 	southClusterID := ""
@@ -616,16 +617,16 @@ func (e *Exporter) GatherMetrics() {
 	}
 
 	for _, component := range components {
-		log.Debugf("%s: GatherMetrics() calls AppListCommands(%s)", e.client.System.ID, component)
-		if cmds, err := e.client.AppListCommands(component); err != nil {
+		log.Debugf("%s: GatherMetrics() calls AppListCommands(%s)", e.Client.System.ID, component)
+		if cmds, err := e.Client.AppListCommands(component); err != nil {
 			log.Errorf("%s: %v", component, err)
 			e.IncrementErrorCounter()
-			log.Debugf("%s: GatherMetrics() completed AppListCommands(%s)", e.client.System.ID, component)
+			log.Debugf("%s: GatherMetrics() completed AppListCommands(%s)", e.Client.System.ID, component)
 		} else {
-			log.Debugf("%s: GatherMetrics() completed AppListCommands(%s)", e.client.System.ID, component)
+			log.Debugf("%s: GatherMetrics() completed AppListCommands(%s)", e.Client.System.ID, component)
 			if cmds["coverage/show"] {
-				log.Debugf("%s: GatherMetrics() calls GetAppCoverageMetrics(%s)", e.client.System.ID, component)
-				if metrics, err := e.client.GetAppCoverageMetrics(component); err != nil {
+				log.Debugf("%s: GatherMetrics() calls GetAppCoverageMetrics(%s)", e.Client.System.ID, component)
+				if metrics, err := e.Client.GetAppCoverageMetrics(component); err != nil {
 					log.Errorf("%s: %v", component, err)
 					e.IncrementErrorCounter()
 				} else {
@@ -637,7 +638,7 @@ func (e *Exporter) GatherMetrics() {
 									covTotal,
 									prometheus.CounterValue,
 									value,
-									e.client.System.ID,
+									e.Client.System.ID,
 									component,
 									event,
 								))
@@ -646,7 +647,7 @@ func (e *Exporter) GatherMetrics() {
 									covAvg,
 									prometheus.GaugeValue,
 									value,
-									e.client.System.ID,
+									e.Client.System.ID,
 									component,
 									event,
 									period,
@@ -655,11 +656,11 @@ func (e *Exporter) GatherMetrics() {
 						}
 					}
 				}
-				log.Debugf("%s: GatherMetrics() completed GetAppCoverageMetrics(%s)", e.client.System.ID, component)
+				log.Debugf("%s: GatherMetrics() completed GetAppCoverageMetrics(%s)", e.Client.System.ID, component)
 			}
 			if cmds["cluster/status DB"] {
-				log.Debugf("%s: GatherMetrics() calls GetAppClusteringInfo(%s)", e.client.System.ID, component)
-				if cluster, err := e.client.GetAppClusteringInfo(component); err != nil {
+				log.Debugf("%s: GatherMetrics() calls GetAppClusteringInfo(%s)", e.Client.System.ID, component)
+				if cluster, err := e.Client.GetAppClusteringInfo(component); err != nil {
 					isClusterEnabled = false
 					log.Errorf("%s: %v", component, err)
 					//e.IncrementErrorCounter()
@@ -667,7 +668,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterEnabled,
 						prometheus.GaugeValue,
 						0,
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 					))
 				} else {
@@ -682,14 +683,14 @@ func (e *Exporter) GatherMetrics() {
 						clusterEnabled,
 						prometheus.GaugeValue,
 						1,
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 					))
 					e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 						clusterRole,
 						prometheus.GaugeValue,
 						float64(cluster.Role),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.UUID,
@@ -700,7 +701,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterStatus,
 						prometheus.GaugeValue,
 						float64(cluster.Status),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -709,7 +710,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterTerm,
 						prometheus.CounterValue,
 						float64(cluster.Term),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -718,7 +719,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterNotCommittedEntryCount,
 						prometheus.GaugeValue,
 						float64(cluster.NotCommittedEntries),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -727,7 +728,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterNotAppliedEntryCount,
 						prometheus.GaugeValue,
 						float64(cluster.NotAppliedEntries),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -736,7 +737,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterNextIndex,
 						prometheus.CounterValue,
 						float64(cluster.NextIndex),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -745,7 +746,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterMatchIndex,
 						prometheus.CounterValue,
 						float64(cluster.MatchIndex),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -754,7 +755,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterLogLowIndex,
 						prometheus.CounterValue,
 						float64(cluster.Log.Low),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -763,7 +764,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterLogHighIndex,
 						prometheus.CounterValue,
 						float64(cluster.Log.High),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -772,7 +773,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterLeaderSelf,
 						prometheus.GaugeValue,
 						float64(cluster.IsLeaderSelf),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -781,7 +782,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterVoteSelf,
 						prometheus.GaugeValue,
 						float64(cluster.IsVotedSelf),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -790,7 +791,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterPeerCount,
 						prometheus.GaugeValue,
 						float64(len(cluster.Peers)),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -799,7 +800,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterPeerInConnTotal,
 						prometheus.GaugeValue,
 						float64(cluster.Connections.Inbound),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -808,7 +809,7 @@ func (e *Exporter) GatherMetrics() {
 						clusterPeerOutConnTotal,
 						prometheus.GaugeValue,
 						float64(cluster.Connections.Outbound),
-						e.client.System.ID,
+						e.Client.System.ID,
 						component,
 						cluster.ID,
 						cluster.ClusterID,
@@ -818,7 +819,7 @@ func (e *Exporter) GatherMetrics() {
 							clusterPeerNextIndex,
 							prometheus.CounterValue,
 							float64(peer.NextIndex),
-							e.client.System.ID,
+							e.Client.System.ID,
 							component,
 							cluster.ID,
 							cluster.ClusterID,
@@ -828,7 +829,7 @@ func (e *Exporter) GatherMetrics() {
 							clusterPeerMatchIndex,
 							prometheus.CounterValue,
 							float64(peer.MatchIndex),
-							e.client.System.ID,
+							e.Client.System.ID,
 							component,
 							cluster.ID,
 							cluster.ClusterID,
@@ -838,7 +839,7 @@ func (e *Exporter) GatherMetrics() {
 							clusterPeerInConnInfo,
 							prometheus.GaugeValue,
 							float64(peer.Connection.Inbound),
-							e.client.System.ID,
+							e.Client.System.ID,
 							component,
 							cluster.ID,
 							cluster.ClusterID,
@@ -849,7 +850,7 @@ func (e *Exporter) GatherMetrics() {
 							clusterPeerOutConnInfo,
 							prometheus.GaugeValue,
 							float64(peer.Connection.Outbound),
-							e.client.System.ID,
+							e.Client.System.ID,
 							component,
 							cluster.ID,
 							cluster.ClusterID,
@@ -859,7 +860,7 @@ func (e *Exporter) GatherMetrics() {
 					}
 					//log.Infof("%s: %v", component, cluster)
 				}
-				log.Debugf("%s: GatherMetrics() completed GetAppClusteringInfo(%s)", e.client.System.ID, component)
+				log.Debugf("%s: GatherMetrics() completed GetAppClusteringInfo(%s)", e.Client.System.ID, component)
 			}
 		}
 	}
@@ -869,7 +870,7 @@ func (e *Exporter) GatherMetrics() {
 			clusterGroup,
 			prometheus.GaugeValue,
 			1,
-			e.client.System.ID,
+			e.Client.System.ID,
 			northClusterID+southClusterID,
 		))
 	}
@@ -880,8 +881,8 @@ func (e *Exporter) GatherMetrics() {
 	}
 
 	for _, component := range components {
-		log.Debugf("%s: GatherMetrics() calls IsDefaultPortUp(%s)", e.client.System.ID, component)
-		defaultPortUp, err := e.client.IsDefaultPortUp(component)
+		log.Debugf("%s: GatherMetrics() calls IsDefaultPortUp(%s)", e.Client.System.ID, component)
+		defaultPortUp, err := e.Client.IsDefaultPortUp(component)
 		if err != nil {
 			log.Errorf("%s: %v", component, err)
 			e.IncrementErrorCounter()
@@ -890,13 +891,13 @@ func (e *Exporter) GatherMetrics() {
 			networkPortUp,
 			prometheus.GaugeValue,
 			float64(defaultPortUp),
-			e.client.System.ID,
+			e.Client.System.ID,
 			component,
 			"default",
 		))
-		log.Debugf("%s: GatherMetrics() completed IsDefaultPortUp(%s)", e.client.System.ID, component)
-		log.Debugf("%s: GatherMetrics() calls IsSslPortUp(%s)", e.client.System.ID, component)
-		sslPortUp, err := e.client.IsSslPortUp(component)
+		log.Debugf("%s: GatherMetrics() completed IsDefaultPortUp(%s)", e.Client.System.ID, component)
+		log.Debugf("%s: GatherMetrics() calls IsSslPortUp(%s)", e.Client.System.ID, component)
+		sslPortUp, err := e.Client.IsSslPortUp(component)
 		if err != nil {
 			log.Errorf("%s: %v", component, err)
 			e.IncrementErrorCounter()
@@ -905,15 +906,15 @@ func (e *Exporter) GatherMetrics() {
 			networkPortUp,
 			prometheus.GaugeValue,
 			float64(sslPortUp),
-			e.client.System.ID,
+			e.Client.System.ID,
 			component,
 			"ssl",
 		))
-		log.Debugf("%s: GatherMetrics() completed IsSslPortUp(%s)", e.client.System.ID, component)
+		log.Debugf("%s: GatherMetrics() completed IsSslPortUp(%s)", e.Client.System.ID, component)
 
 		if isClusterEnabled {
-			log.Debugf("%s: GatherMetrics() calls IsRaftPortUp(%s)", e.client.System.ID, component)
-			raftPortUp, err := e.client.IsRaftPortUp(component)
+			log.Debugf("%s: GatherMetrics() calls IsRaftPortUp(%s)", e.Client.System.ID, component)
+			raftPortUp, err := e.Client.IsRaftPortUp(component)
 			if err != nil {
 				log.Errorf("%s: %v", component, err)
 				e.IncrementErrorCounter()
@@ -922,11 +923,11 @@ func (e *Exporter) GatherMetrics() {
 				networkPortUp,
 				prometheus.GaugeValue,
 				float64(raftPortUp),
-				e.client.System.ID,
+				e.Client.System.ID,
 				component,
 				"raft",
 			))
-			log.Debugf("%s: GatherMetrics() completed IsRaftPortUp(%s)", e.client.System.ID, component)
+			log.Debugf("%s: GatherMetrics() completed IsRaftPortUp(%s)", e.Client.System.ID, component)
 		}
 	}
 
@@ -940,28 +941,28 @@ func (e *Exporter) GatherMetrics() {
 		info,
 		prometheus.GaugeValue,
 		1,
-		e.client.System.ID, e.client.System.RunDir, e.client.System.Hostname,
-		e.client.System.Type, e.client.System.Version,
-		e.client.Database.Vswitch.Version, e.client.Database.Vswitch.Schema.Version,
+		e.Client.System.ID, e.Client.System.RunDir, e.Client.System.Hostname,
+		e.Client.System.Type, e.Client.System.Version,
+		e.Client.Database.Vswitch.Version, e.Client.Database.Vswitch.Schema.Version,
 	))
 
 	e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 		requestErrors,
 		prometheus.CounterValue,
 		float64(e.errors),
-		e.client.System.ID,
+		e.Client.System.ID,
 	))
 
 	e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 		nextPoll,
 		prometheus.CounterValue,
 		float64(e.nextCollectionTicker),
-		e.client.System.ID,
+		e.Client.System.ID,
 	))
 
 	e.nextCollectionTicker = time.Now().Add(time.Duration(e.pollInterval) * time.Second).Unix()
 
-	log.Debugf("%s: GatherMetrics() returns", e.client.System.ID)
+	log.Debugf("%s: GatherMetrics() returns", e.Client.System.ID)
 	return
 }
 
@@ -969,175 +970,32 @@ func init() {
 	prometheus.MustRegister(version.NewCollector(namespace + "_exporter"))
 }
 
-func main() {
-	var listenAddress string
-	var metricsPath string
-	var pollTimeout int
-	var pollInterval int
-	var isShowVersion bool
-	var logLevel string
-	var opts exporterOpts
+// GetVersionInfo returns exporter info.
+func GetVersionInfo() string {
+	return version.Info()
+}
 
-	var systemRunDir string
-	var databaseVswitchName string
-	var databaseVswitchSocketRemote string
-	var databaseVswitchFileDataPath string
-	var databaseVswitchFileLogPath string
-	var databaseVswitchFilePidPath string
-	var databaseVswitchFileSystemIDPath string
-	var databaseNorthboundName string
-	var databaseNorthboundSocketRemote string
-	var databaseNorthboundSocketControl string
-	var databaseNorthboundFileDataPath string
-	var databaseNorthboundFileLogPath string
-	var databaseNorthboundFilePidPath string
-	var databaseNorthboundPortDefault int
-	var databaseNorthboundPortSsl int
-	var databaseNorthboundPortRaft int
-	var databaseSouthboundName string
-	var databaseSouthboundSocketRemote string
-	var databaseSouthboundSocketControl string
-	var databaseSouthboundFileDataPath string
-	var databaseSouthboundFileLogPath string
-	var databaseSouthboundFilePidPath string
-	var databaseSouthboundPortDefault int
-	var databaseSouthboundPortSsl int
-	var databaseSouthboundPortRaft int
-	var serviceVswitchdFileLogPath string
-	var serviceVswitchdFilePidPath string
-	var serviceNorthdFileLogPath string
-	var serviceNorthdFilePidPath string
+// GetVersionBuildContext returns exporter build context.
+func GetVersionBuildContext() string {
+	return version.BuildContext()
+}
 
-	flag.StringVar(&listenAddress, "web.listen-address", ":9476", "Address to listen on for web interface and telemetry.")
-	flag.StringVar(&metricsPath, "web.telemetry-path", "/metrics", "Path under which to expose metrics.")
-	flag.IntVar(&pollTimeout, "ovn.timeout", 2, "Timeout on gRPC requests to OVN.")
-	flag.IntVar(&pollInterval, "ovn.poll-interval", 15, "The minimum interval (in seconds) between collections from OVN server.")
-	flag.BoolVar(&isShowVersion, "version", false, "version information")
-	flag.StringVar(&logLevel, "log.level", "info", "logging severity level")
+// GetVersion returns exporter version.
+func GetVersion() string {
+	return version.Version
+}
 
-	flag.StringVar(&systemRunDir, "system.run.dir", "/var/run/openvswitch", "OVS default run directory.")
+// GetRevision returns exporter revision.
+func GetRevision() string {
+	return version.Revision
+}
 
-	flag.StringVar(&databaseVswitchName, "database.vswitch.name", "Open_vSwitch", "The name of OVS db.")
-	flag.StringVar(&databaseVswitchSocketRemote, "database.vswitch.socket.remote", "unix:/var/run/openvswitch/db.sock", "JSON-RPC unix socket to OVS db.")
-	flag.StringVar(&databaseVswitchFileDataPath, "database.vswitch.file.data.path", "/etc/openvswitch/conf.db", "OVS db file.")
-	flag.StringVar(&databaseVswitchFileLogPath, "database.vswitch.file.log.path", "/var/log/openvswitch/ovsdb-server.log", "OVS db log file.")
-	flag.StringVar(&databaseVswitchFilePidPath, "database.vswitch.file.pid.path", "/var/run/openvswitch/ovsdb-server.pid", "OVS db process id file.")
-	flag.StringVar(&databaseVswitchFileSystemIDPath, "database.vswitch.file.system.id.path", "/etc/openvswitch/system-id.conf", "OVS system id file.")
+// GetExporterName returns exporter name.
+func GetExporterName() string {
+	return appName
+}
 
-	flag.StringVar(&databaseNorthboundName, "database.northbound.name", "OVN_Northbound", "The name of OVN NB (northbound) db.")
-	flag.StringVar(&databaseNorthboundSocketRemote, "database.northbound.socket.remote", "unix:/run/openvswitch/ovnnb_db.sock", "JSON-RPC unix socket to OVN NB db.")
-	flag.StringVar(&databaseNorthboundSocketControl, "database.northbound.socket.control", "unix:/run/openvswitch/ovnnb_db.ctl", "JSON-RPC unix socket to OVN NB app.")
-	flag.StringVar(&databaseNorthboundFileDataPath, "database.northbound.file.data.path", "/var/lib/openvswitch/ovnnb_db.db", "OVN NB db file.")
-	flag.StringVar(&databaseNorthboundFileLogPath, "database.northbound.file.log.path", "/var/log/openvswitch/ovsdb-server-nb.log", "OVN NB db log file.")
-	flag.StringVar(&databaseNorthboundFilePidPath, "database.northbound.file.pid.path", "/run/openvswitch/ovnnb_db.pid", "OVN NB db process id file.")
-	flag.IntVar(&databaseNorthboundPortDefault, "database.northbound.port.default", 6641, "OVN NB db network socket port.")
-	flag.IntVar(&databaseNorthboundPortSsl, "database.northbound.port.ssl", 6631, "OVN NB db network socket secure port.")
-	flag.IntVar(&databaseNorthboundPortRaft, "database.northbound.port.raft", 6643, "OVN NB db network port for clustering (raft)")
-
-	flag.StringVar(&databaseSouthboundName, "database.southbound.name", "OVN_Southbound", "The name of OVN SB (southbound) db.")
-	flag.StringVar(&databaseSouthboundSocketRemote, "database.southbound.socket.remote", "unix:/run/openvswitch/ovnsb_db.sock", "JSON-RPC unix socket to OVN SB db.")
-	flag.StringVar(&databaseSouthboundSocketControl, "database.southbound.socket.control", "unix:/run/openvswitch/ovnsb_db.ctl", "JSON-RPC unix socket to OVN SB app.")
-	flag.StringVar(&databaseSouthboundFileDataPath, "database.southbound.file.data.path", "/var/lib/openvswitch/ovnsb_db.db", "OVN SB db file.")
-	flag.StringVar(&databaseSouthboundFileLogPath, "database.southbound.file.log.path", "/var/log/openvswitch/ovsdb-server-sb.log", "OVN SB db log file.")
-	flag.StringVar(&databaseSouthboundFilePidPath, "database.southbound.file.pid.path", "/run/openvswitch/ovnsb_db.pid", "OVN SB db process id file.")
-	flag.IntVar(&databaseSouthboundPortDefault, "database.southbound.port.default", 6642, "OVN SB db network socket port.")
-	flag.IntVar(&databaseSouthboundPortSsl, "database.southbound.port.ssl", 6632, "OVN SB db network socket secure port.")
-	flag.IntVar(&databaseSouthboundPortRaft, "database.southbound.port.raft", 6644, "OVN SB db network port for clustering (raft)")
-
-	flag.StringVar(&serviceVswitchdFileLogPath, "service.vswitchd.file.log.path", "/var/log/openvswitch/ovs-vswitchd.log", "OVS vswitchd daemon log file.")
-	flag.StringVar(&serviceVswitchdFilePidPath, "service.vswitchd.file.pid.path", "/var/run/openvswitch/ovs-vswitchd.pid", "OVS vswitchd daemon process id file.")
-
-	flag.StringVar(&serviceNorthdFileLogPath, "service.ovn.northd.file.log.path", "/var/log/openvswitch/ovn-northd.log", "OVN northd daemon log file.")
-	flag.StringVar(&serviceNorthdFilePidPath, "service.ovn.northd.file.pid.path", "/run/openvswitch/ovn-northd.pid", "OVN northd daemon process id file.")
-
-	var usageHelp = func() {
-		fmt.Fprintf(os.Stderr, "\n%s - Prometheus Exporter for Open Virtual Network (OVN)\n\n", appName)
-		fmt.Fprintf(os.Stderr, "Usage: %s [arguments]\n\n", appName)
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/greenpau/ovn_exporter/\n\n")
-	}
-	flag.Usage = usageHelp
-	flag.Parse()
-	opts.timeout = pollTimeout
-	version.Version = appVersion
-	version.Revision = gitCommit
-	version.Branch = gitBranch
-	version.BuildUser = buildUser
-	version.BuildDate = buildDate
-
-	if err := log.Base().SetLevel(logLevel); err != nil {
-		log.Errorf(err.Error())
-		os.Exit(1)
-	}
-
-	if isShowVersion {
-		fmt.Fprintf(os.Stdout, "%s %s", appName, version.Version)
-		if version.Revision != "" {
-			fmt.Fprintf(os.Stdout, ", commit: %s\n", version.Revision)
-		} else {
-			fmt.Fprint(os.Stdout, "\n")
-		}
-		os.Exit(0)
-	}
-
-	log.Infof("Starting %s %s", appName, version.Info())
-	log.Infof("Build context %s", version.BuildContext())
-
-	exporter, err := NewExporter(opts)
-	if err != nil {
-		log.Errorf("%s failed to init properly: %s", appName, err)
-	}
-
-	exporter.client.System.RunDir = systemRunDir
-
-	exporter.client.Database.Vswitch.Name = databaseVswitchName
-	exporter.client.Database.Vswitch.Socket.Remote = databaseVswitchSocketRemote
-	exporter.client.Database.Vswitch.File.Data.Path = databaseVswitchFileDataPath
-	exporter.client.Database.Vswitch.File.Log.Path = databaseVswitchFileLogPath
-	exporter.client.Database.Vswitch.File.Pid.Path = databaseVswitchFilePidPath
-	exporter.client.Database.Vswitch.File.SystemID.Path = databaseVswitchFileSystemIDPath
-
-	exporter.client.Database.Northbound.Name = databaseNorthboundName
-	exporter.client.Database.Northbound.Socket.Remote = databaseNorthboundSocketRemote
-	exporter.client.Database.Northbound.Socket.Control = databaseNorthboundSocketControl
-	exporter.client.Database.Northbound.File.Data.Path = databaseNorthboundFileDataPath
-	exporter.client.Database.Northbound.File.Log.Path = databaseNorthboundFileLogPath
-	exporter.client.Database.Northbound.File.Pid.Path = databaseNorthboundFilePidPath
-	exporter.client.Database.Northbound.Port.Default = databaseNorthboundPortDefault
-	exporter.client.Database.Northbound.Port.Ssl = databaseNorthboundPortSsl
-	exporter.client.Database.Northbound.Port.Raft = databaseNorthboundPortRaft
-
-	exporter.client.Database.Southbound.Name = databaseSouthboundName
-	exporter.client.Database.Southbound.Socket.Remote = databaseSouthboundSocketRemote
-	exporter.client.Database.Southbound.Socket.Control = databaseSouthboundSocketControl
-	exporter.client.Database.Southbound.File.Data.Path = databaseSouthboundFileDataPath
-	exporter.client.Database.Southbound.File.Log.Path = databaseSouthboundFileLogPath
-	exporter.client.Database.Southbound.File.Pid.Path = databaseSouthboundFilePidPath
-	exporter.client.Database.Southbound.Port.Default = databaseSouthboundPortDefault
-	exporter.client.Database.Southbound.Port.Ssl = databaseSouthboundPortSsl
-	exporter.client.Database.Southbound.Port.Raft = databaseSouthboundPortRaft
-
-	exporter.client.Service.Vswitchd.File.Log.Path = serviceVswitchdFileLogPath
-	exporter.client.Service.Vswitchd.File.Pid.Path = serviceVswitchdFilePidPath
-
-	exporter.client.Service.Northd.File.Log.Path = serviceNorthdFileLogPath
-	exporter.client.Service.Northd.File.Pid.Path = serviceNorthdFilePidPath
-
-	log.Infof("OVS system-id: %s", exporter.client.System.ID)
-	exporter.pollInterval = int64(pollInterval)
-	prometheus.MustRegister(exporter)
-
-	http.Handle(metricsPath, prometheus.Handler())
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-             <head><title>OVN Exporter</title></head>
-             <body>
-             <h1>OVN Exporter</h1>
-             <p><a href='` + metricsPath + `'>Metrics</a></p>
-             </body>
-             </html>`))
-	})
-
-	log.Infoln("Listening on", listenAddress)
-	log.Fatal(http.ListenAndServe(listenAddress, nil))
+// SetPollInterval sets exporter's polling interval.
+func (e *Exporter) SetPollInterval(i int64) {
+	e.pollInterval = i
 }
