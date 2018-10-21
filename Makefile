@@ -6,7 +6,7 @@ BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BINARY:=ovn-exporter
 VERBOSE:=-v
-PROJECT=github.com/greenpau/ovn_exporter
+PROJECT=github.com/ovnworks/ovn_exporter
 PKG_DIR=pkg/ovn_exporter
 
 all:
