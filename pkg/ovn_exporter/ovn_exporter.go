@@ -153,6 +153,12 @@ var (
 		"The total number of times particular events occur during a OVSDB daemon's runtime.",
 		[]string{"system_id", "component", "event"}, nil,
 	)
+	memUsage = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "memory_usage"),
+		"The memory usage.",
+		[]string{"system_id", "component", "facility"}, nil,
+	)
+
 	clusterEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "cluster_enabled"),
 		"Is OVN clustering enabled (1) or not (0).",
@@ -320,6 +326,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- networkPortUp
 	ch <- covAvg
 	ch <- covTotal
+	ch <- memUsage
 	ch <- clusterEnabled
 	ch <- clusterRole
 	ch <- clusterStatus
@@ -658,6 +665,25 @@ func (e *Exporter) GatherMetrics() {
 					}
 				}
 				log.Debugf("%s: GatherMetrics() completed GetAppCoverageMetrics(%s)", e.Client.System.ID, component)
+			}
+			if cmds["memory/show"] {
+				log.Debugf("%s: GatherMetrics() calls GetAppMemoryMetrics(%s)", e.Client.System.ID, component)
+				if metrics, err := e.Client.GetAppMemoryMetrics(component); err != nil {
+					log.Errorf("%s: %v", component, err)
+					e.IncrementErrorCounter()
+				} else {
+					for facility, value := range metrics {
+						e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
+							memUsage,
+							prometheus.GaugeValue,
+							value,
+							e.Client.System.ID,
+							component,
+							facility,
+						))
+					}
+				}
+				log.Debugf("%s: GatherMetrics() completed GetAppMemoryMetrics(%s)", e.Client.System.ID, component)
 			}
 			if cmds["cluster/status DB"] {
 				log.Debugf("%s: GatherMetrics() calls GetAppClusteringInfo(%s)", e.Client.System.ID, component)
