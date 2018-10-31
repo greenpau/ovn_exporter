@@ -612,6 +612,7 @@ func (e *Exporter) GatherMetrics() {
 	southClusterID := ""
 
 	components = []string{
+		"ovsdb-server",
 		"ovsdb-server-southbound",
 		"ovsdb-server-northbound",
 	}
