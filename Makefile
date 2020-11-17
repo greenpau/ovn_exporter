@@ -6,7 +6,7 @@ BUILD_USER:=$(shell whoami)
 BUILD_DATE:=$(shell date +"%Y-%m-%d")
 BINARY:=ovn-exporter
 VERBOSE:=-v
-PROJECT=github.com/forward53/ovn_exporter
+PROJECT=github.com/greenpau/ovn_exporter
 PKG_DIR=pkg/ovn_exporter
 
 all:
@@ -125,3 +125,23 @@ del-ovn:
 	@sudo ovn-nbctl ls-del 19a05268b5eb3df10e2d50b8220505ea0026679bb62eb39d71c8707dd5165248 || true
 	@sudo ovn-nbctl show
 	@sudo ovn-sbctl show
+
+license:
+	@addlicense -c "Paul Greenberg greenpau@outlook.com" -y 2020 pkg/*/*.go
+
+release: license
+	@echo "Making release"
+	@go mod tidy
+	@go mod verify
+	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
+	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && git status && false )
+	@versioned -patch
+	@echo "Patched version"
+	@git add VERSION
+	@git commit -m "released v`cat VERSION | head -1`"
+	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
+	@git push
+	@git push --tags
+	@@echo "If necessary, run the following commands:"
+	@echo "  git push --delete origin v$(APP_VERSION)"
+	@echo "  git tag --delete v$(APP_VERSION)"

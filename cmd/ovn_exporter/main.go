@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	ovn "github.com/forward53/ovn_exporter/pkg/ovn_exporter"
+	ovn "github.com/greenpau/ovn_exporter/pkg/ovn_exporter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"net/http"
@@ -93,7 +93,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\n%s - Prometheus Exporter for Open Virtual Network (OVN)\n\n", ovn.GetExporterName())
 		fmt.Fprintf(os.Stderr, "Usage: %s [arguments]\n\n", ovn.GetExporterName())
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/forward53/ovn_exporter/\n\n")
+		fmt.Fprintf(os.Stderr, "\nDocumentation: https://github.com/greenpau/ovn_exporter/\n\n")
 	}
 	flag.Usage = usageHelp
 	flag.Parse()
