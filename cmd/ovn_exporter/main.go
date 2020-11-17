@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ovn "github.com/greenpau/ovn_exporter/pkg/ovn_exporter"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"net/http"
 	"os"
@@ -164,7 +165,7 @@ func main() {
 	exporter.SetPollInterval(int64(pollInterval))
 	prometheus.MustRegister(exporter)
 
-	http.Handle(metricsPath, prometheus.Handler())
+	http.Handle(metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
              <head><title>OVN Exporter</title></head>
