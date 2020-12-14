@@ -16,14 +16,15 @@ package ovn_exporter
 
 import (
 	//"github.com/davecgh/go-spew/spew"
-	"github.com/greenpau/ovsdb"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
-	"github.com/prometheus/common/version"
 	_ "net/http/pprof"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/greenpau/ovsdb"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"github.com/prometheus/common/version"
 )
 
 const (
@@ -292,16 +293,21 @@ func NewExporter(opts Options) (*Exporter, error) {
 	client.Timeout = opts.Timeout
 	e.Client = client
 	e.Client.GetSystemID()
+	return &e, nil
+}
+
+// ExporterPerformClientCalls creates client connection.
+func ExporterPerformClientCalls(e *Exporter) (*Exporter, error) {
 	log.Debugf("%s: NewExporter() calls Connect()", e.Client.System.ID)
-	if err := client.Connect(); err != nil {
-		return &e, err
+	if err := e.Client.Connect(); err != nil {
+		return e, err
 	}
 	log.Debugf("%s: NewExporter() calls GetSystemInfo()", e.Client.System.ID)
 	if err := e.Client.GetSystemInfo(); err != nil {
-		return &e, err
+		return e, err
 	}
 	log.Debugf("%s: NewExporter() initialized successfully", e.Client.System.ID)
-	return &e, nil
+	return e, nil
 }
 
 // Describe describes all the metrics ever exported by the OVN exporter. It
