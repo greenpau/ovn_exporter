@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+
 	ovn "github.com/greenpau/ovn_exporter/pkg/ovn_exporter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -160,6 +161,11 @@ func main() {
 
 	exporter.Client.Service.Northd.File.Log.Path = serviceNorthdFileLogPath
 	exporter.Client.Service.Northd.File.Pid.Path = serviceNorthdFilePidPath
+
+	exporter, err = ovn.ExporterPerformClientCalls(exporter)
+	if err != nil {
+		log.Errorf("%s failed to finalize exporter calls properly: %s", ovn.GetExporterName(), err)
+	}
 
 	log.Infof("OVS system-id: %s", exporter.Client.System.ID)
 	exporter.SetPollInterval(int64(pollInterval))
