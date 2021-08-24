@@ -596,6 +596,25 @@ func (e *Exporter) GatherMetrics() {
 		upValue = 0
 	} else {
 		for _, port := range lswps {
+			macAddr := "<nil>"
+			ipAddr := "<nil>"
+
+			// Find first MAC address
+			for _, a := range port.Addresses {
+				if a.MacAddress != nil {
+					macAddr = a.MacAddress.String()
+					break
+				}
+			}
+
+			// Find first IP address
+			for _, a := range port.Addresses {
+				if len(a.IpAddresses) > 0 {
+					ipAddr = a.IpAddresses[0].String()
+					break
+				}
+			}
+
 			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 				logicalSwitchPortInfo,
 				prometheus.GaugeValue,
@@ -607,8 +626,8 @@ func (e *Exporter) GatherMetrics() {
 				port.LogicalSwitchName,
 				port.DatapathUUID,
 				port.PortBindingUUID,
-				port.MacAddress.String(),
-				port.IPAddress.String(),
+				macAddr,
+				ipAddr,
 			))
 			e.metrics = append(e.metrics, prometheus.MustNewConstMetric(
 				logicalSwitchPortTunnelKey,
