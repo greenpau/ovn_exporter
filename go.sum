@@ -101,8 +101,8 @@ github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
-github.com/greenpau/ovsdb v0.0.0-20181114004433-3582b85e8968 h1:43G8cL0AW/I6NEB8dNIZkyodnPRImI1oW2rLWS2qYE8=
-github.com/greenpau/ovsdb v0.0.0-20181114004433-3582b85e8968/go.mod h1:X0FHRsMDToEpJ9idBi6fCUo5zde+Ulzl08sa21ui64g=
+github.com/greenpau/ovsdb v1.0.2 h1:w1Ug+t4SFr3i6xhBL6VHqimxPEq0iq0vZcB3De9P018=
+github.com/greenpau/ovsdb v1.0.2/go.mod h1:P+4YHmaBzXzEE0sIeIE3T5fNI3IZMCvgaqsZs51wsyI=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.9.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
