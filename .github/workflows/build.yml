@@ -1,4 +1,4 @@
-name: Build
+name: Release Binaries
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -39,4 +39,3 @@ jobs:
       with:
         name: ovn_exporter
         path: dist/*
-        retention-days: 14
