@@ -44,9 +44,9 @@ func init() {
 	app = versioned.NewPackageManager("ovn-exporter")
 	app.Description = "Prometheus Exporter for Open Virtual Network (OVN)"
 	app.Documentation = "https://github.com/greenpau/ovn_exporter/"
-	app.SetVersion(appVersion, "1.0.3")
-	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.3-5-gef8cd10")
+	app.SetVersion(appVersion, "1.0.4")
+	app.SetGitBranch(gitBranch, "")
+	app.SetGitCommit(gitCommit, "")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
