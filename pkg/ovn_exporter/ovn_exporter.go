@@ -15,13 +15,13 @@
 package ovn_exporter
 
 import (
-	//"github.com/davecgh/go-spew/spew"
 	_ "net/http/pprof"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/greenpau/ovsdb"
+	"github.com/greenpau/versioned"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
@@ -32,13 +32,24 @@ const (
 )
 
 var (
-	appName    = "ovn-exporter"
-	appVersion = "[untracked]"
+	app        *versioned.PackageManager
+	appVersion string
 	gitBranch  string
 	gitCommit  string
-	buildUser  string // whoami
-	buildDate  string // date -u
+	buildUser  string
+	buildDate  string
 )
+
+func init() {
+	app = versioned.NewPackageManager("ovn-exporter")
+	app.Description = "Prometheus Exporter for Open Virtual Network (OVN)"
+	app.Documentation = "https://github.com/greenpau/ovn_exporter/"
+	app.SetVersion(appVersion, "1.0.3")
+	app.SetGitBranch(gitBranch, "main")
+	app.SetGitCommit(gitCommit, "v1.0.3-5-gef8cd10")
+	app.SetBuildUser(buildUser, "")
+	app.SetBuildDate(buildDate, "")
+}
 
 var (
 	up = prometheus.NewDesc(
@@ -1044,7 +1055,12 @@ func GetRevision() string {
 
 // GetExporterName returns exporter name.
 func GetExporterName() string {
-	return appName
+	return app.Name
+}
+
+// GetExporterVersion return full version info.
+func GetExporterVersion() string {
+	return app.Banner()
 }
 
 // SetPollInterval sets exporter's polling interval.

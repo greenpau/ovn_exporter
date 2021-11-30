@@ -136,8 +136,9 @@ release: license
 	@if [ $(GIT_BRANCH) != "main" ]; then echo "cannot release to non-main branch $(GIT_BRANCH)" && false; fi
 	@git diff-index --quiet HEAD -- || ( echo "git directory is dirty, commit changes first" && git status && false )
 	@versioned -patch
+	@versioned -release -sync pkg/ovn_exporter/ovn_exporter.go
 	@echo "Patched version"
-	@git add VERSION
+	@git add .
 	@git commit -m "released v`cat VERSION | head -1`"
 	@git tag -a v`cat VERSION | head -1` -m "v`cat VERSION | head -1`"
 	@git push

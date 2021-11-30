@@ -110,12 +110,7 @@ func main() {
 	}
 
 	if isShowVersion {
-		fmt.Fprintf(os.Stdout, "%s %s", ovn.GetExporterName(), ovn.GetVersion())
-		if ovn.GetRevision() != "" {
-			fmt.Fprintf(os.Stdout, ", commit: %s\n", ovn.GetRevision())
-		} else {
-			fmt.Fprint(os.Stdout, "\n")
-		}
+		fmt.Fprintf(os.Stdout, "%s\n", ovn.GetExporterVersion())
 		os.Exit(0)
 	}
 
