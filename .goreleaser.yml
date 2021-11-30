@@ -1,5 +1,4 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
+---
 before:
   hooks:
     - go mod tidy
@@ -27,9 +26,7 @@ builds:
       - '"all=-trimpath={{.Env.GOPATH}}"'
     binary: ovn-exporter
 archives:
-  - replacements:
-      linux: Linux
-      amd64: x86_64
+  - name_template: "ovn-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
