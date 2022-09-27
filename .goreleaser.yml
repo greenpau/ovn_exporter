@@ -8,17 +8,17 @@ builds:
     goos:
       - linux
     ldflags:
-      - '-w -s \
-         -X github.com/prometheus/common/version.Version={{ .Version }}\
-         -X github.com/prometheus/common/version.Revision={{ .Commit }}\
-         -X github.com/prometheus/common/version.Branch={{ .Branch }}\
-         -X github.com/prometheus/common/version.BuildUser=greenpau\
-         -X github.com/prometheus/common/version.BuildDate={{ .Date }}\
-         -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.appVersion={{ .Version }}\
-         -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.gitBranch={{ .Branch }}\
-         -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.gitCommit={{ .Commit }}\
-         -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.buildUser=greenpau\
-         -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.buildDate={{ .Date }}'
+      - -w -s
+        -X github.com/prometheus/common/version.Version={{ .Version }}
+        -X github.com/prometheus/common/version.Revision={{ .Commit }}
+        -X github.com/prometheus/common/version.Branch={{ .Branch }}
+        -X github.com/prometheus/common/version.BuildUser=greenpau
+        -X github.com/prometheus/common/version.BuildDate={{ .Date }}
+        -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.appVersion={{ .Version }}
+        -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.gitBranch={{ .Branch }}
+        -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.gitCommit={{ .Commit }}
+        -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.buildUser=greenpau
+        -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.buildDate={{ .Date }}
     main: './cmd/ovn_exporter'
     asmflags:
       - 'all=-trimpath={{.Env.GOPATH}}'
