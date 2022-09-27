@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-kit/log/level"
 	ovn "github.com/greenpau/ovn_exporter/pkg/ovn_exporter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
 )
 
 func main() {
@@ -100,26 +100,41 @@ func main() {
 	flag.Usage = usageHelp
 	flag.Parse()
 
-	opts := ovn.Options{
-		Timeout: pollTimeout,
-	}
-
-	if err := log.Base().SetLevel(logLevel); err != nil {
-		log.Errorf(err.Error())
-		os.Exit(1)
-	}
-
 	if isShowVersion {
-		fmt.Fprintf(os.Stdout, "%s\n", ovn.GetExporterVersion())
+		fmt.Fprintf(os.Stdout, "%s %s", ovn.GetExporterName(), ovn.GetVersion())
+		if ovn.GetRevision() != "" {
+			fmt.Fprintf(os.Stdout, ", commit: %s\n", ovn.GetRevision())
+		} else {
+			fmt.Fprint(os.Stdout, "\n")
+		}
 		os.Exit(0)
 	}
 
-	log.Infof("Starting %s %s", ovn.GetExporterName(), ovn.GetVersionInfo())
-	log.Infof("Build context %s", ovn.GetVersionBuildContext())
+	logger, err := ovn.NewLogger(logLevel)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed initializing logger: %v", err)
+		os.Exit(1)
+	}
+
+	level.Info(logger).Log(
+		"msg", "Starting exporter",
+		"exporter", ovn.GetExporterName(),
+		"version", ovn.GetVersionInfo(),
+		"build_context", ovn.GetVersionBuildContext(),
+	)
+
+	opts := ovn.Options{
+		Timeout: pollTimeout,
+		Logger:  logger,
+	}
 
 	exporter, err := ovn.NewExporter(opts)
 	if err != nil {
-		log.Errorf("%s failed to init properly: %s", ovn.GetExporterName(), err)
+		level.Error(logger).Log(
+			"msg", "failed to init properly",
+			"error", err.Error(),
+		)
+		os.Exit(1)
 	}
 
 	exporter.Client.System.RunDir = systemRunDir
@@ -159,10 +174,15 @@ func main() {
 
 	exporter, err = ovn.ExporterPerformClientCalls(exporter)
 	if err != nil {
-		log.Errorf("%s failed to finalize exporter calls properly: %s", ovn.GetExporterName(), err)
+		level.Error(logger).Log(
+			"msg", "failed to finalize exporter calls properly",
+			"exporter_name", ovn.GetExporterName(),
+			"error", err.Error(),
+		)
 	}
 
-	log.Infof("OVS system-id: %s", exporter.Client.System.ID)
+	level.Info(logger).Log("ovs_system_id", exporter.Client.System.ID)
+
 	exporter.SetPollInterval(int64(pollInterval))
 	prometheus.MustRegister(exporter)
 
@@ -177,6 +197,12 @@ func main() {
              </html>`))
 	})
 
-	log.Infoln("Listening on", listenAddress)
-	log.Fatal(http.ListenAndServe(listenAddress, nil))
+	level.Info(logger).Log("listen_on ", listenAddress)
+	if err := http.ListenAndServe(listenAddress, nil); err != nil {
+		level.Error(logger).Log(
+			"msg", "listener failed",
+			"error", err.Error(),
+		)
+		os.Exit(1)
+	}
 }
