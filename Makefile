@@ -28,7 +28,7 @@ all:
 		-X $(PROJECT)/$(PKG_DIR).buildUser=$(BUILD_USER) \
 		-X $(PROJECT)/$(PKG_DIR).buildDate=$(BUILD_DATE)" \
 		-gcflags="all=-trimpath=$(GOPATH)/src" \
-		-asmflags="all=-trimpath $(GOPATH)/src" \
+		-asmflags="all=-trimpath=$(GOPATH)/src" \
 		./cmd/ovn_exporter/*.go
 	@echo "Done!"
 
