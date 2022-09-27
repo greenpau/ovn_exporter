@@ -11,10 +11,10 @@ PKG_DIR=pkg/ovn_exporter
 
 all:
 	@echo "Version: $(APP_VERSION), Branch: $(GIT_BRANCH), Revision: $(GIT_COMMIT)"
-	@echo "Build on $(BUILD_DATE) by $(BUILD_USER)"
-	@mkdir -p bin/
-	@rm -rf ./bin/*
-	@CGO_ENABLED=0 go build -o ./bin/$(BINARY) $(VERBOSE) \
+	@echo "Build for $(BUILD_OS)-$(BUILD_ARCH) on $(BUILD_DATE) by $(BUILD_USER)"
+	@rm -rf ./bin/$(BUILD_OS)-$(BUILD_ARCH)
+	@mkdir -p bin/$(BUILD_OS)-$(BUILD_ARCH)
+	@GOOS=$(BUILD_OS) GOARCH=$(BUILD_ARCH) CGO_ENABLED=0 go build -o ./bin/$(BUILD_OS)-$(BUILD_ARCH)/$(BINARY) $(VERBOSE) \
 		-ldflags="-w -s \
 		-X github.com/prometheus/common/version.Version=$(APP_VERSION) \
 		-X github.com/prometheus/common/version.Revision=$(GIT_COMMIT) \
@@ -44,25 +44,25 @@ clean:
 
 deploy:
 	@sudo rm -rf /usr/sbin/$(BINARY)
-	@sudo cp ./bin/$(BINARY) /usr/sbin/$(BINARY)
+	@sudo cp ./bin/$(BUILD_OS)-$(BUILD_ARCH)/$(BINARY) /usr/sbin/$(BINARY)
 	@sudo usermod -a -G openvswitch ovn_exporter
 	@sudo chmod g+w /var/run/openvswitch/db.sock
 	@sudo setcap cap_sys_admin,cap_sys_nice,cap_dac_override+ep /usr/sbin/$(BINARY)
 
 qtest:
-	@./bin/$(BINARY) -version
-	@sudo ./bin/$(BINARY) -web.listen-address 0.0.0.0:5000 -log.level debug -ovn.poll-interval 5
+	@./bin/$(BUILD_OS)-$(BUILD_ARCH)/$(BINARY) -version
+	@sudo ./bin/$(BUILD_OS)-$(BUILD_ARCH)/$(BINARY) -web.listen-address 0.0.0.0:5000 -log.level debug -ovn.poll-interval 5
 
 dist: all
 	@mkdir -p ./dist
-	@rm -rf ./dist/*
-	@mkdir -p ./dist/$(BINARY)-$(APP_VERSION).linux-amd64
-	@cp ./bin/$(BINARY) ./dist/$(BINARY)-$(APP_VERSION).linux-amd64/
-	@cp ./README.md ./dist/$(BINARY)-$(APP_VERSION).linux-amd64/
-	@cp LICENSE ./dist/$(BINARY)-$(APP_VERSION).linux-amd64/
-	@cp assets/systemd/add_service.sh ./dist/$(BINARY)-$(APP_VERSION).linux-amd64/install.sh
-	@chmod +x ./dist/$(BINARY)-$(APP_VERSION).linux-amd64/*.sh
-	@cd ./dist/ && tar -cvzf ./$(BINARY)-$(APP_VERSION).linux-amd64.tar.gz ./$(BINARY)-$(APP_VERSION).linux-amd64
+	@rm -rf ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)
+	@mkdir -p ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)
+	@cp ./bin/$(BUILD_OS)-$(BUILD_ARCH)/$(BINARY) ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)/
+	@cp ./README.md ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)/
+	@cp LICENSE ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)/
+	@cp assets/systemd/add_service.sh ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)/install.sh
+	@chmod +x ./dist/$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)/*.sh
+	@cd ./dist/ && tar -cvzf ./$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH).tar.gz ./$(BINARY)-$(APP_VERSION).$(BUILD_OS)-$(BUILD_ARCH)
 
 ovn:
 	@sudo ovn-nbctl \
