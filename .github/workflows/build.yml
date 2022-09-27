@@ -12,18 +12,27 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
+    - name: Set up environment
+      run: |
+        set -eu
+        cat >> $GITHUB_ENV <<EOF
+        GO111MODULE=off
+        GOPATH=$HOME/go
+        PATH=$PATH:$HOME/go/bin
+        EOF
+
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Set up go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.19
 
     - name: Run goreleaser
-      uses: goreleaser/goreleaser-action@v2
+      uses: goreleaser/goreleaser-action@v3
       with:
         distribution: goreleaser
         version: latest
@@ -33,7 +42,7 @@ jobs:
         GOPATH: /home/runner/go
 
     - name: Upload assets
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ovn_exporter
         path: dist/*
