@@ -21,9 +21,9 @@ builds:
          -X github.com/greenpau/ovn_exporter/pkg/ovn_exporter.buildDate={{ .Date }}"'
     main: './cmd/ovn_exporter'
     asmflags:
-      - '"all=-trimpath={{.Env.GOPATH}}"'
+      - 'all=-trimpath={{.Env.GOPATH}}'
     gcflags:
-      - '"all=-trimpath={{.Env.GOPATH}}"'
+      - 'all=-trimpath={{.Env.GOPATH}}'
     binary: ovn-exporter
 archives:
   - name_template: "ovn-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
