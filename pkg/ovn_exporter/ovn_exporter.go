@@ -287,11 +287,21 @@ type Exporter struct {
 	nextCollectionTicker int64
 	metrics              []prometheus.Metric
 	logger               log.Logger
+	disableOvsdbServer 	 bool
+	disableOvsVswitchd bool
+	disableNorthd bool
+	disableNorthbound bool
+	disableSouthbound bool
 }
 
 type Options struct {
 	Timeout int
 	Logger  log.Logger
+	DisableOvsdbServer bool
+	DisableOvsVswitchd bool
+	DisableNorthd bool
+	DisableNorthbound bool
+	DisableSouthbound bool
 }
 
 // NewLogger returns an instance of logger.
@@ -317,6 +327,11 @@ func NewExporter(opts Options) (*Exporter, error) {
 	e := Exporter{
 		timeout: opts.Timeout,
 		logger:  opts.Logger,
+		disableOvsdbServer: opts.DisableOvsdbServer,
+		disableOvsVswitchd: opts.DisableOvsVswitchd,
+		disableNorthd: opts.DisableNorthd,
+		disableNorthbound: opts.DisableNorthbound,
+		disableSouthbound: opts.DisableSouthbound,
 	}
 	client := ovsdb.NewOvnClient()
 	client.Timeout = opts.Timeout
@@ -482,7 +497,7 @@ func (e *Exporter) GatherMetrics() {
 
 	err = e.Client.GetSystemInfo()
 	if err != nil {
-		level.Error(e.logger).Log(
+		level.Debug(e.logger).Log(
 			"msg", "GetSystemInfo() failed",
 			"vswitch_name", e.Client.Database.Vswitch.Name,
 			"system_id", e.Client.System.ID,
@@ -498,16 +513,17 @@ func (e *Exporter) GatherMetrics() {
 		)
 	}
 
-	components := []string{
-		"ovsdb-server",
-		"ovsdb-server-southbound",
-		"ovsdb-server-southbound-monitoring",
-		"ovsdb-server-northbound",
-		"ovsdb-server-northbound-monitoring",
-		"ovn-northd",
-		"ovn-northd-monitoring",
-		"ovs-vswitchd",
-	}
+	components := []string{	}
+
+	if (! e.disableOvsdbServer) { components = append(components, "ovsdb-server")	}
+	if (! e.disableOvsVswitchd) { components = append(components, "ovs-vswitchd")	}
+	if (! e.disableNorthd) { components = append(components, "ovn-northd") }
+	if (! e.disableNorthd) { components = append(components, "ovn-northd-monitoring")	}
+	if (! e.disableNorthbound) { components = append(components, "ovsdb-server-northbound") }
+	if (! e.disableNorthbound) { components = append(components, "ovsdb-server-northbound-monitoring") }
+	if (! e.disableSouthbound) { components = append(components, "ovsdb-server-southbound") }
+	if (! e.disableSouthbound) { components = append(components, "ovsdb-server-southbound-monitoring") }
+
 	for _, component := range components {
 		p, err := e.Client.GetProcessInfo(component)
 		level.Debug(e.logger).Log(
@@ -540,14 +556,14 @@ func (e *Exporter) GatherMetrics() {
 			"system_id", e.Client.System.ID,
 		)
 	}
+	
+	components = []string{ }
+	if (! e.disableOvsdbServer) { components = append(components, "ovsdb-server")	}
+	if (! e.disableOvsVswitchd) { components = append(components, "ovs-vswitchd")	}
+	if (! e.disableNorthd) { components = append(components, "ovn-northd") }
+	if (! e.disableNorthbound) { components = append(components, "ovsdb-server-northbound") }
+	if (! e.disableSouthbound) { components = append(components, "ovsdb-server-southbound") }
 
-	components = []string{
-		"ovsdb-server",
-		"ovsdb-server-southbound",
-		"ovsdb-server-northbound",
-		"ovn-northd",
-		"ovs-vswitchd",
-	}
 	for _, component := range components {
 		level.Debug(e.logger).Log(
 			"msg", "GatherMetrics() calls GetLogFileInfo()",
@@ -781,11 +797,10 @@ func (e *Exporter) GatherMetrics() {
 	northClusterID := ""
 	southClusterID := ""
 
-	components = []string{
-		"ovsdb-server",
-		"ovsdb-server-southbound",
-		"ovsdb-server-northbound",
-	}
+	components = []string{ }
+	if (! e.disableOvsdbServer) { components = append(components, "ovsdb-server")	}
+	if (! e.disableNorthbound) { components = append(components, "ovsdb-server-northbound") }
+	if (! e.disableSouthbound) { components = append(components, "ovsdb-server-southbound") }
 
 	for _, component := range components {
 		level.Debug(e.logger).Log(
@@ -1121,10 +1136,9 @@ func (e *Exporter) GatherMetrics() {
 		))
 	}
 
-	components = []string{
-		"ovsdb-server-southbound",
-		"ovsdb-server-northbound",
-	}
+	components = []string{ }
+	if (! e.disableNorthbound) { components = append(components, "ovsdb-server-northbound") }
+	if (! e.disableSouthbound) { components = append(components, "ovsdb-server-southbound") }
 
 	for _, component := range components {
 		level.Debug(e.logger).Log(

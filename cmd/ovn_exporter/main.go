@@ -20,6 +20,11 @@ func main() {
 	var isShowVersion bool
 	var logLevel string
 	var systemRunDir string
+	var disableOvsdbServer bool
+	var disableOvsVswitchd bool
+	var disableNorthd bool
+	var disableNorthbound bool
+	var disableSouthbound bool
 	var databaseVswitchName string
 	var databaseVswitchSocketRemote string
 	var databaseVswitchFileDataPath string
@@ -91,6 +96,12 @@ func main() {
 	flag.StringVar(&serviceNorthdFileLogPath, "service.ovn.northd.file.log.path", "/var/log/openvswitch/ovn-northd.log", "OVN northd daemon log file.")
 	flag.StringVar(&serviceNorthdFilePidPath, "service.ovn.northd.file.pid.path", "/run/openvswitch/ovn-northd.pid", "OVN northd daemon process id file.")
 
+	flag.BoolVar(&disableNorthd, "disable.northd", false, "Disable northd")
+	flag.BoolVar(&disableNorthbound, "disable.ovsdb.server.northbound", false, "Disable ovsdb-server-northbound")
+	flag.BoolVar(&disableSouthbound, "disable.ovsdb.server.southbound", false, "Disable ovsdb-server-southbound")
+	flag.BoolVar(&disableOvsdbServer, "disable.ovsdb.server", false, "Disable ovsdb-server")
+	flag.BoolVar(&disableOvsVswitchd, "disable.ovs.vswitchd", false, "Disable ovs-vswitchd")
+
 	var usageHelp = func() {
 		fmt.Fprintf(os.Stderr, "\n%s - Prometheus Exporter for Open Virtual Network (OVN)\n\n", ovn.GetExporterName())
 		fmt.Fprintf(os.Stderr, "Usage: %s [arguments]\n\n", ovn.GetExporterName())
@@ -126,6 +137,11 @@ func main() {
 	opts := ovn.Options{
 		Timeout: pollTimeout,
 		Logger:  logger,
+		DisableOvsdbServer: disableOvsdbServer,
+		DisableOvsVswitchd: disableOvsVswitchd,
+		DisableNorthd: disableNorthd,
+		DisableNorthbound: disableNorthbound,
+		DisableSouthbound: disableSouthbound,
 	}
 
 	exporter, err := ovn.NewExporter(opts)
