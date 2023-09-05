@@ -1,10 +1,10 @@
+.coverage/
+ovn_exporter.test
 /.build
 /.release
 /.tarballs
-/ovn-exporter
 *.tar.gz
 bin/
 dist/
 TODO
-
-dist/
+/ovn-exporter

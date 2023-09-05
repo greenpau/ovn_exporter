@@ -32,8 +32,18 @@ all:
 		./cmd/ovn_exporter/*.go
 	@echo "Done!"
 
+#test: all
+#	@go test -v ./$(PKG_DIR)/*.go
+#	@echo "PASS: core tests"
+#	@echo "OK: all tests passed!"
+
 test: all
-	@go test -v ./$(PKG_DIR)/*.go
+	@mkdir -p .coverage;\
+		rm -rf ./pkg/ovn_exporter/ovn_exporter.test;\
+		go test -c $(VERBOSE) -coverprofile=.coverage/coverage.out ./pkg/ovn_exporter/*.go;\
+		mv ./ovn_exporter.test ./pkg/ovn_exporter/ovn_exporter.test;\
+		chmod +x ./pkg/ovn_exporter/ovn_exporter.test;\
+		sudo ./pkg/ovn_exporter/ovn_exporter.test -test.v -test.testlogfile ./.coverage/test.log -test.coverprofile ./.coverage/coverage.out
 	@echo "PASS: core tests"
 	@echo "OK: all tests passed!"
 
@@ -49,6 +59,10 @@ dep:
 	@go get -u github.com/kyoh86/richgo
 	@go get -u github.com/greenpau/versioned/cmd/versioned
 	@go get -u github.com/google/addlicense
+
+coverage:
+	@go tool cover -html=.coverage/coverage.out -o .coverage/coverage.html
+	@go tool cover -func=.coverage/coverage.out
 
 deploy:
 	@sudo rm -rf /usr/sbin/$(BINARY)
