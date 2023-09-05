@@ -1,5 +1,7 @@
 # Open Virtual Network (OVN) Exporter
 
+<a href="https://github.com/greenpau/ovn_exporter/actions/" target="_blank"><img src="https://github.com/greenpau/ovn_exporter/workflows/build/badge.svg?branch=main"></a>
+
 Export Open Virtual Network (OVN) data to Prometheus.
 
 ## Introduction
