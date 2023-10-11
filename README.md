@@ -48,7 +48,7 @@ make qtest
 | `ovn_cluster_enabled` |  Is OVN clustering enabled (1) or not (0). | `system_id` |
 | `ovn_cluster_inbound_peer_conn_total` |  The total number of outbound connections to cluster peers. | `system_id` |
 | `ovn_cluster_leader_self` |  Is this server consider itself a leader (1) or not (0). | `system_id` |
-| `ovn_cluster_log_high_index` |  The raft's low number associated with this server. | `system_id` |
+| `ovn_cluster_log_high_index` |  The raft's high number associated with this server. | `system_id` |
 | `ovn_cluster_log_low_index` |  The raft's low number associated with this server. | `system_id` |
 | `ovn_cluster_match_index` |  The raft's match index associated with this server. | `system_id` |
 | `ovn_cluster_next_index` |  The raft's next index associated with this server. | `system_id` |
@@ -101,7 +101,7 @@ ovn_cluster_inbound_peer_conn_total{cluster_id="b3be",component="ovsdb-server-so
 # TYPE ovn_cluster_leader_self gauge
 ovn_cluster_leader_self{cluster_id="5c1c",component="ovsdb-server-northbound",server_id="983c",system_id="bea816d9-f201-4d69-a609-5b03f278f5b9"} 1
 ovn_cluster_leader_self{cluster_id="b3be",component="ovsdb-server-southbound",server_id="6ef",system_id="bea816d9-f201-4d69-a609-5b03f278f5b9"} 1
-# HELP ovn_cluster_log_high_index The raft's low number associated with this server.
+# HELP ovn_cluster_log_high_index The raft's high number associated with this server.
 # TYPE ovn_cluster_log_high_index counter
 ovn_cluster_log_high_index{cluster_id="5c1c",component="ovsdb-server-northbound",server_id="983c",system_id="bea816d9-f201-4d69-a609-5b03f278f5b9"} 95
 ovn_cluster_log_high_index{cluster_id="b3be",component="ovsdb-server-southbound",server_id="6ef",system_id="bea816d9-f201-4d69-a609-5b03f278f5b9"} 121
